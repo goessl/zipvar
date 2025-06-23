@@ -12,8 +12,8 @@ def zip_var(*iterables):
         result = []
         for i in reversed(range(len(iterators))):
             try:
-                result.insert(0, next(iterators[i]))
+                result.append(next(iterators[i]))
             except StopIteration:
                 del iterators[i]
         if result:
-            yield tuple(result)
+            yield tuple(reversed(result))
