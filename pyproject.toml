@@ -1,6 +1,6 @@
 [project]
 name = "zipvar"
-version = "0.2"
+version = "0.3"
 requires-python = ">=3.0"
 authors = [
     {name="Sebastian Gössl", email="goessl@student.tugraz.at"},
