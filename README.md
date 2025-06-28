@@ -6,15 +6,16 @@ Not short. Not long. Just right.
 >>> from zipvar import zip_var
 >>> a = (1, 2, 3)
 >>> b = [4, 5, 6, 7, 8]
->>> c = set()
+>>> c = set([9])
 >>> for x in zip_var(a, b, c):
 ...     print(x)
 ...
-(1, 4)
+(1, 4, 9)
 (2, 5)
 (3, 6)
 (7,)
 (8,)
+>>>
 ```
 
 ## Installation
@@ -34,9 +35,14 @@ iterables. Iteration continues until all iterables are exhausted, then a
 StopIteration is raised. Once an iterable is exhausted, it is excluded from
 the resulting tuples - they become shorter over time.
 
-## todo
+## Implementation
 
- - [ ] as C extension
+Implemented in C, forked from Pythons `itertools.zip_longest`.
+Pure Python fallback.
+
+## Todo
+
+ - [x] as C extension
 
 ## License (MIT)
 

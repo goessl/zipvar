@@ -1,3 +1,5 @@
+"""Pure Python implementation of the zipvar module."""
+
 def zip_var(*iterables):
     """Return a `zip_var` object whose `.__next__()` method returns tuples
     containing one element from each of the given iterables.
