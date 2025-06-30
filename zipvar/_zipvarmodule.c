@@ -37,7 +37,7 @@ static inline zipvar_state* find_state_by_type(PyTypeObject* tp)
 typedef struct {
     PyObject_HEAD
     PyObject* itlist; //list of iterators that are still active
-    //TODO: retain result and reuse if possible
+    PyObject* reslist; //result list
 } zipvarobject;
 
 #define zipvarobject_CAST(op)   ((zipvarobject *)(op))
@@ -71,6 +71,7 @@ static PyObject* zip_var_new(PyTypeObject* type, PyObject* args, PyObject* kwds)
     zipvarobject* vz;
     Py_ssize_t i;
     PyObject* itlist;
+    PyObject* reslist;
     Py_ssize_t listsize;
     
     //no kw args
@@ -78,11 +79,8 @@ static PyObject* zip_var_new(PyTypeObject* type, PyObject* args, PyObject* kwds)
         return NULL;
     }
     
-    /* args must be a tuple */
-    assert(PyTuple_Check(args));
+    //iterables to iterators
     listsize = PyTuple_GET_SIZE(args);
-    
-    /* obtain iterators */
     itlist = PyList_New(listsize);
     if(itlist == NULL) {
         return NULL;
@@ -98,13 +96,22 @@ static PyObject* zip_var_new(PyTypeObject* type, PyObject* args, PyObject* kwds)
         PyList_SET_ITEM(itlist, listsize-i-1, it);
     }
     
-    /* create zipvarobject structure */
-    vz = (zipvarobject*)type->tp_alloc(type, 0);
-    if(vz == NULL) {
+    //create result list
+    reslist = PyList_New(0);
+    if(reslist == NULL) {
         Py_DECREF(itlist);
         return NULL;
     }
+    
+    //create zipvarobject structure
+    vz = (zipvarobject*)type->tp_alloc(type, 0);
+    if(vz == NULL) {
+        Py_DECREF(itlist);
+        Py_DECREF(reslist);
+        return NULL;
+    }
     vz->itlist = itlist;
+    vz->reslist = reslist;
     return (PyObject*)vz;
 }
 
@@ -114,6 +121,7 @@ static void zip_var_dealloc(PyObject* op)
     PyTypeObject* tp = Py_TYPE(vz);
     PyObject_GC_UnTrack(vz);
     Py_XDECREF(vz->itlist);
+    Py_XDECREF(vz->reslist);
     tp->tp_free(vz);
     Py_DECREF(tp);
 }
@@ -123,6 +131,7 @@ static int zip_var_traverse(PyObject* op, visitproc visit, void* arg)
     zipvarobject* vz = zipvarobject_CAST(op);
     Py_VISIT(Py_TYPE(vz));
     Py_VISIT(vz->itlist);
+    Py_VISIT(vz->reslist);
     return 0;
 }
 
@@ -133,16 +142,14 @@ static PyObject* zip_var_next(PyObject *op)
     Py_ssize_t listsize;
     PyObject* it;
     PyObject* item;
-    PyObject* result;
-    PyObject* tuple_result;
+    PyObject* reslist = vz->reslist;
     
     listsize = PyList_GET_SIZE(vz->itlist);
     if(listsize == 0) { //no iterators left
-        return NULL;
+        return NULL; //StopIteration
     }
     
-    result = PyList_New(0); //result list
-    if(result == NULL) {
+    if(PyList_Clear(reslist)) { //clear list failed
         return NULL;
     }
     
@@ -150,19 +157,13 @@ static PyObject* zip_var_next(PyObject *op)
         it = PyList_GET_ITEM(vz->itlist, i);
         item = PyIter_Next(it);
         if(item == NULL) { //next(it) failed or iterator is exhausted
-            if(PyErr_Occurred()) { //error during next(it)
-                Py_DECREF(result);
-                return NULL;
-            }
-            //iterator exhausted, remove it
-            if(PySequence_DelItem(vz->itlist, i)) { //removing failed
-                Py_DECREF(result);
+            //if no error occured, try removing the iterator from the iterator list
+            if(PyErr_Occurred() || PySequence_DelItem(vz->itlist, i)) { //next(it) or del iterators[i] failed
                 return NULL;
             }
         } else {
-            if(PyList_Append(result, item)) { //error during result build
+            if(PyList_Append(reslist, item)) { //error during result build
                 Py_DECREF(item);
-                Py_DECREF(result);
                 return NULL;
             }
             Py_DECREF(item);
@@ -170,14 +171,11 @@ static PyObject* zip_var_next(PyObject *op)
     }
     
     //no elements gotten
-    if(PyList_GET_SIZE(result) == 0) {
-        Py_DECREF(result);
-        return NULL;
+    if(PyList_GET_SIZE(reslist) == 0) {
+        return NULL; //StopIteration
     }
     
-    tuple_result = PyList_AsTuple(result);
-    Py_DECREF(result);
-    return tuple_result;
+    return PyList_AsTuple(reslist);
 }
 
 PyDoc_STRVAR(zip_var_doc,

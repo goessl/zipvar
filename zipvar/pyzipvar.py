@@ -10,8 +10,9 @@ def zip_var(*iterables):
     the resulting tuples - they become shorter over time.
     """
     iterators = list(map(iter, reversed(iterables)))
+    result = []
     while iterators:
-        result = []
+        result.clear()
         for i in reversed(range(len(iterators))):
             try:
                 result.append(next(iterators[i]))
