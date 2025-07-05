@@ -44,6 +44,11 @@ Pure Python fallback.
 
  - [x] as C extension
 
+## References
+
+- [Deferred `more-itertools` suggestion](https://github.com/more-itertools/more-itertools/issues/1025) with great benchmarks and alternative implementations by [pochmann3](https://github.com/pochmann3).
+- [Stack Overflow question for `zipvar`.](https://stackoverflow.com/questions/38054593/zip-longest-without-fillvalue)
+
 ## License (MIT)
 
 Copyright (c) 2025 Sebastian Gössl
